@@ -16,3 +16,6 @@ Thumbs.db
 
 # Kotlin incremental build cache
 .kotlin/
+app/signing.properties
+*.jks
+*.keystore

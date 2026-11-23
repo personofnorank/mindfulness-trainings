@@ -1,0 +1,31 @@
+# Notices
+
+## Copyright and licensing
+
+The source code of this app is licensed under the GNU General Public License,
+Version 3 (see `LICENSE`). Any derivative works of the code must be released
+under the GPL-3.0-or-later with source code available.
+
+## The Mindfulness Trainings texts
+
+The texts of the Five and Fourteen Mindfulness Trainings (`assets/five_trainings.txt`,
+`assets/fourteen_trainings.txt`) are © Thich Nhat Hanh / the Unified Buddhist Church
+/ Parallax Press, and are included in this repository **as-is, unmodified**.
+They are NOT licensed under the GPL, and no licence to modify or adapt them is
+granted by this repository. All rights in the texts remain with their copyright holders.
+
+## Name and attribution
+
+You are free to use, study, modify, and redistribute the code of this app under
+the GPL. However:
+
+- You may **not** distribute an app containing modified or substituted texts of
+  the Mindfulness Trainings under the name "Mindfulness Trainings", or
+  a confusingly similar name, or in a way that suggests it contains the authentic
+  teachings.
+- You may **not** use or imply an association with **Plum Village**, Thich Nhat Hanh,
+  or the Order of Interbeing in connection with texts that have been modified.
+
+If you fork this app and change the training texts, you must also change the app
+name, remove all Plum Village references, and make clear that the texts are not
+the original Mindfulness Trainings.

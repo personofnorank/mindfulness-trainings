@@ -1,11 +1,32 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
+// Release signing reads app/signing.properties (gitignored). Absent file =
+// unsigned release builds, so the project stays buildable for anyone cloning.
+val signingProps = Properties().apply {
+    val f = rootProject.file("app/signing.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "org.plumvillage.mt"
     compileSdk = 35
+
+    signingConfigs {
+        if (signingProps.isNotEmpty()) {
+            create("release") {
+                storeFile = file(signingProps.getProperty("storeFile"))
+                storePassword = signingProps.getProperty("storePassword")
+                keyAlias = signingProps.getProperty("keyAlias")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
+    }
+
 
     defaultConfig {
         applicationId = "org.plumvillage.mt"
@@ -13,6 +34,15 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (signingProps.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     compileOptions {
