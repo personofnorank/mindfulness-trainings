@@ -49,7 +49,10 @@ object DailyNotifier {
     /** Builder for the daily training notification. Caller must hold POST_NOTIFICATIONS. */
     fun notification(context: Context): NotificationCompat.Builder {
         ensureChannel(context)
-        val headline = HeadlineRepository.todaysHeadline(context)
+        val set = HeadlineRepository.selectedSet(context)
+        val all = HeadlineRepository.load(context, set)
+        val idx = HeadlineRepository.todaysIndex(context, set, all.size)
+        val headline = all[idx]
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -71,7 +74,7 @@ object DailyNotifier {
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(headline.title)
+            .setContentTitle("${idx + 1} of ${all.size}: ${headline.title}")
             .setContentIntent(contentIntent)
             .setDeleteIntent(deleteIntent)
             .setOngoing(true)
