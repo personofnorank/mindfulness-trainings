@@ -12,6 +12,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import org.plumvillage.mt.HeadlineRepository.Set
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 class HomeActivity : ComponentActivity() {
 
@@ -19,10 +24,26 @@ class HomeActivity : ComponentActivity() {
     private lateinit var fiveRadio: RadioButton
     private lateinit var fourteenRadio: RadioButton
 
+    private val notifPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) PersistService.start(this)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
-        PersistService.start(this)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Fresh install (Android 13+): ask for POST_NOTIFICATIONS; the
+            // persist service starts either in the callback (granted) or
+            // immediately (denied / pre-13), never blocking the UI.
+            notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            PersistService.start(this)
+        } else {
+            PersistService.start(this)
+        }
     }
 
     override fun onResume() {

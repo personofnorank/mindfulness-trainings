@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 
 object DailyNotifier {
     const val CHANNEL_ID = "daily_digest"
+    const val SILENT_CHANNEL_ID = "silent_hold"
     private const val NOTIFICATION_ID = 1001
 
     fun ensureChannel(context: Context) {
@@ -33,6 +34,16 @@ object DailyNotifier {
         )
         context.getSystemService(NotificationManager::class.java)
             .createNotificationChannel(channel)
+        // Minimal silent channel used only to satisfy the FGS contract when
+        // POST_NOTIFICATIONS is not yet granted.
+        context.getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(
+                NotificationChannel(
+                    SILENT_CHANNEL_ID,
+                    context.getString(R.string.channel_name),
+                    NotificationManager.IMPORTANCE_MIN
+                )
+            )
     }
 
     /** Builder for the daily training notification. Caller must hold POST_NOTIFICATIONS. */
@@ -80,17 +91,31 @@ object DailyNotifier {
 
     /** Posts the daily training as the persist-service's foreground notification. */
     fun postForeground(persistService: PersistService) {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(persistService, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Foreground-service-without-notification is not legal, so stop
-            // the service and post plainly instead; MainActivity will restart
-            // it next time the app is opened with the permission granted.
+        val notifAllowed = Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(
+                persistService, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+        if (notifAllowed) {
+            persistService.startForeground(
+                NOTIFICATION_ID, notification(persistService).build()
+            )
+        } else {
+            // Permission not granted yet. Android REQUIRES startForeground()
+            // after startForegroundService() within ~10 s even if the
+            // notification would be blocked; post a silent minimal
+            // notification to satisfy the contract, then stop cleanly.
+            // The activity re-starts the service once permission is granted.
+            persistService.startForeground(
+                NOTIFICATION_ID,
+                NotificationCompat.Builder(persistService, SILENT_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle(persistService.getString(R.string.app_name))
+                    .setOngoing(true)
+                    .build()
+            )
             persistService.stopSelf()
-            return
         }
-        persistService.startForeground(NOTIFICATION_ID, notification(persistService).build())
     }
 }
 
