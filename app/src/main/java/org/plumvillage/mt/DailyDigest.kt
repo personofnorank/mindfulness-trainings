@@ -135,13 +135,24 @@ class DailyDigestWorker(context: Context, params: WorkerParameters) :
 
     companion object {
         private const val WORK_NAME = "daily-digest"
-        private const val POST_HOUR = 8
 
-        /** Schedules the daily post at POST_HOUR (next occurrence), surviving reboots via WorkManager. */
+        /** Refresh at 00:05 so the training is current whenever the user wakes. */
+        private const val POST_HOUR = 0
+        private const val POST_MINUTE = 5
+
+        /**
+         * Schedules a nightly refresh at 00:05 (next occurrence), surviving
+         * reboots via WorkManager. UPDATE (not KEEP) re-anchors the schedule
+         * every day so a delayed first run (e.g. device asleep) doesn't cause
+         * permanent drift away from midnight. The worker always fires
+         * nightly; when the cadence is WEEKLY the extra nights are cheap
+         * no-ops that just re-post the unchanged current training, keeping
+         * the notification correct whichever cadence is chosen.
+         */
         fun schedule(context: Context) {
             val now = LocalDateTime.now()
-            var next = now.toLocalDate().atTime(POST_HOUR, 0)
-            if (!now.toLocalTime().isBefore(LocalTime.of(POST_HOUR, 0))) {
+            var next = now.toLocalDate().atTime(POST_HOUR, POST_MINUTE)
+            if (!now.toLocalTime().isBefore(LocalTime.of(POST_HOUR, POST_MINUTE))) {
                 next = next.plusDays(1)
             }
             val delayMinutes = Duration.between(now, next).toMinutes()
@@ -149,7 +160,7 @@ class DailyDigestWorker(context: Context, params: WorkerParameters) :
                 .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request
+                WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request
             )
         }
     }
