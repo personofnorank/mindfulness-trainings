@@ -29,6 +29,10 @@
             android:name=".MainActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".TrainingsActivity"
+            android:exported="false" />
+
         <service
             android:name=".PersistService"
             android:exported="false"
