@@ -70,7 +70,9 @@ class MainActivity : ComponentActivity() {
             addView(body)
             addView(homeButton)
         }
-        setContentView(ScrollView(this).apply { addView(column) })
+        setContentView(ScrollView(this).apply { addView(column) }.also {
+            StatusBars.pad(this, it)
+        })
 
         try {
             val headline = HeadlineRepository.todaysHeadline(this)
