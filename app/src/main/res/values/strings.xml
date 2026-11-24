@@ -16,4 +16,9 @@
     <string name="expand_less">Less \u25B4</string>
     <string name="view_today">View today\'s training</string>
     <string name="back_to_home">Back to home</string>
+    <string name="cadence_label">Display a new training:</string>
+    <string name="cadence_daily">Every day</string>
+    <string name="cadence_weekly">Every week</string>
+    <string name="link_five">The Five Mindfulness Trainings</string>
+    <string name="link_fourteen">The Fourteen Mindfulness Trainings</string>
 </resources>

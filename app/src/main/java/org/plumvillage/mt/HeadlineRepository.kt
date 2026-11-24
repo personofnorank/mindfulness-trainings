@@ -12,9 +12,14 @@ object HeadlineRepository {
         FOURTEEN("fourteen_trainings.txt", "Fourteen Mindfulness Trainings")
     }
 
+    enum class Cadence(val daysPerStep: Long) {
+        DAILY(1), WEEKLY(7)
+    }
+
     private const val PREFS = "app_prefs"
     private const val KEY_FIRST_RUN_PREFIX = "first_run_date_"
     private const val KEY_SELECTED_SET = "selected_set"
+    private const val KEY_CADENCE = "cadence"
 
     /** The user's chosen set of trainings; defaults to FIVE. */
     fun selectedSet(context: Context): Set {
@@ -26,6 +31,18 @@ object HeadlineRepository {
     fun selectSet(context: Context, set: Set) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_SELECTED_SET, set.name).apply()
+    }
+
+    /** The user's chosen cadence for advancing to the next training; defaults to DAILY. */
+    fun cadence(context: Context): Cadence {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val name = prefs.getString(KEY_CADENCE, Cadence.DAILY.name)
+        return try { Cadence.valueOf(name!!) } catch (_: IllegalArgumentException) { Cadence.DAILY }
+    }
+
+    fun selectCadence(context: Context, cadence: Cadence) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY_CADENCE, cadence.name).apply()
     }
 
     /**
@@ -55,11 +72,17 @@ object HeadlineRepository {
             }
     }
 
-    /** Deterministic index: day 0 = first-run day shows entry 1, then one per calendar day, cycling. */
+    /**
+     * Deterministic index: entry 0 on the first-run day, advancing one entry
+     * every cadence step (a day, or a week) counted from first run, cycling.
+     * floorDiv means a partial step simply holds the current entry longer,
+     * and behaves correctly even if the clock is set back before first run.
+     */
     fun todaysIndex(context: Context, set: Set, listSize: Int): Int {
         require(listSize > 0) { "${set.fileName} contains no entries" }
-        val dayNumber = LocalDate.now().toEpochDay() - startDay(context, set)
-        return (((dayNumber % listSize) + listSize) % listSize).toInt()
+        val elapsedDays = LocalDate.now().toEpochDay() - startDay(context, set)
+        val stepsElapsed = Math.floorDiv(elapsedDays, cadence(context).daysPerStep)
+        return (((stepsElapsed % listSize) + listSize) % listSize).toInt()
     }
 
     fun todaysHeadline(context: Context): Headline {
