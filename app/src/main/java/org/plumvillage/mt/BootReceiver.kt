@@ -14,6 +14,8 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             PersistService.start(context)
+            // Alarms do not survive a reboot; re-arm tonight's 00:05 refresh.
+            DailyAlarms.schedule(context)
         }
     }
 }

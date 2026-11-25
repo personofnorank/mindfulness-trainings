@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         requestPermissionIfNeeded()
-        DailyDigestWorker.schedule(this)
+        DailyAlarms.schedule(this)
         showTodaysHeadline()
     }
 

@@ -6,20 +6,16 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.BroadcastReceiver
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.work.CoroutineWorker
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.WorkerParameters
-import java.time.Duration
+import android.app.AlarmManager
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.util.concurrent.TimeUnit
+import java.time.ZoneId
 
 object DailyNotifier {
     const val CHANNEL_ID = "daily_digest"
@@ -122,46 +118,43 @@ object DailyNotifier {
     }
 }
 
-class DailyDigestWorker(context: Context, params: WorkerParameters) :
-    CoroutineWorker(context, params) {
+/**
+ * Fires at 00:05 local time via an AlarmManager "allow while idle" alarm, so
+ * the refresh happens even if the device is in doze — WorkManager alone
+ * defers indefinitely overnight, leaving yesterday's training pinned until
+ * the user happens to interact. The receiver re-posts the current training's
+ * notification directly (updating the pinned notification by ID; no
+ * foreground-service start from the background) and re-arms the next
+ * night's alarm. It always fires nightly; when the cadence is WEEKLY the
+ * extra nights are cheap no-ops that re-post the unchanged current training.
+ */
+class DailyRefreshReceiver : BroadcastReceiver() {
 
-    override suspend fun doWork(): Result {
-        // Refresh the pinned notification with today's training. Starting the
-        // service re-posts it; if the service was killed the system restarts
-        // it (START_STICKY) and onStartCommand posts again.
-        PersistService.start(applicationContext)
-        return Result.success()
+    override fun onReceive(context: Context, intent: Intent) {
+        DailyNotifier.postToday(context)
+        DailyAlarms.schedule(context)
     }
+}
 
-    companion object {
-        private const val WORK_NAME = "daily-digest"
+object DailyAlarms {
 
-        /** Refresh at 00:05 so the training is current whenever the user wakes. */
-        private const val POST_HOUR = 0
-        private const val POST_MINUTE = 5
+    private const val REQUEST_CODE = 2001
 
-        /**
-         * Schedules a nightly refresh at 00:05 (next occurrence), surviving
-         * reboots via WorkManager. UPDATE (not KEEP) re-anchors the schedule
-         * every day so a delayed first run (e.g. device asleep) doesn't cause
-         * permanent drift away from midnight. The worker always fires
-         * nightly; when the cadence is WEEKLY the extra nights are cheap
-         * no-ops that just re-post the unchanged current training, keeping
-         * the notification correct whichever cadence is chosen.
-         */
-        fun schedule(context: Context) {
-            val now = LocalDateTime.now()
-            var next = now.toLocalDate().atTime(POST_HOUR, POST_MINUTE)
-            if (!now.toLocalTime().isBefore(LocalTime.of(POST_HOUR, POST_MINUTE))) {
-                next = next.plusDays(1)
-            }
-            val delayMinutes = Duration.between(now, next).toMinutes()
-            val request = PeriodicWorkRequestBuilder<DailyDigestWorker>(1, TimeUnit.DAYS)
-                .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
-                .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request
-            )
+    /** Schedules the next 00:05 local-time refresh, replacing any prior alarm. */
+    fun schedule(context: Context) {
+        val now = LocalDateTime.now()
+        var next = now.toLocalDate().atTime(0, 5)
+        if (!now.toLocalTime().isBefore(LocalTime.of(0, 5))) {
+            next = next.plusDays(1)
         }
+        val triggerAt = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val pending = PendingIntent.getBroadcast(
+            context,
+            REQUEST_CODE,
+            Intent(context, DailyRefreshReceiver::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        context.getSystemService(AlarmManager::class.java)
+            .setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
     }
 }
