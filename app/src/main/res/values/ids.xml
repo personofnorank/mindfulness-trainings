@@ -2,4 +2,5 @@
 <resources>
     <!-- Tag keys for window-inset handling (StatusBars). -->
     <item type="id" name="status_bar_base_padding" />
+    <item type="id" name="nav_bar_base_padding" />
 </resources>

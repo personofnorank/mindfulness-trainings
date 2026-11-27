@@ -58,6 +58,17 @@ class MainActivity : ComponentActivity() {
         val homeButton = Button(this).apply {
             text = getString(R.string.back_to_home)
             setOnClickListener { finish() } // returns to HomeActivity underneath
+            // Breathe: keep the button clear of the body text above and the
+            // screen edge below instead of sitting flush at the bottom.
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = pad / 2
+                bottomMargin = pad / 2
+                marginStart = pad
+                marginEnd = pad
+            }
         }
 
         val column = LinearLayout(this).apply {
